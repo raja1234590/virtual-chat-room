@@ -21,8 +21,9 @@ import ScrollableChat from "./ScrollableChat";
 import UpdateGroupChatModal from "./miscellaneous/UpdateGroupChatModal";
 import { ChatState } from "../Context/ChatProvider";
 
-const ENDPOINT = "http://localhost:5000";
+const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
 let socket;
+
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [messages, setMessages] = useState([]);
@@ -129,24 +130,30 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   };
 
   // ================= SOCKET =================
-  useEffect(() => {
-    socket = io(ENDPOINT);
-    socket.emit("setup", user);
+ 
 
-    socket.on("message recieved", (msg) => {
-      if (
-        !selectedChatRef.current ||
-        selectedChatRef.current._id !== msg.chat._id
-      ) {
-        setNotification((prev) => [msg, ...prev]);
-        setFetchAgain((prev) => !prev);
-      } else {
-        setMessages((prev) => [...prev, msg]);
-      }
-    });
+useEffect(() => {
+  socket = io(ENDPOINT, {
+    withCredentials: true,
+  });
 
-    return () => socket.off("message recieved");
-  }, [user, setFetchAgain, setNotification]);
+  socket.emit("setup", user);
+
+  socket.on("message recieved", (msg) => {
+    if (
+      !selectedChatRef.current ||
+      selectedChatRef.current._id !== msg.chat._id
+    ) {
+      setNotification((prev) => [msg, ...prev]);
+      setFetchAgain((prev) => !prev);
+    } else {
+      setMessages((prev) => [...prev, msg]);
+    }
+  });
+
+  return () => socket.off("message recieved");
+}, [user, setFetchAgain, setNotification]);
+
 
   useEffect(() => {
     fetchMessages();
