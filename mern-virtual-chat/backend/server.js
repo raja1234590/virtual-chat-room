@@ -20,13 +20,21 @@ const app = express();
 /* -------------------- MIDDLEWARE -------------------- */
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "https://virtual-chat-room.vercel.app",
-    ],
+    origin: function (origin, callback) {
+      if (
+        !origin ||
+        origin.startsWith("http://localhost:3000") ||
+        origin.endsWith(".vercel.app")
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
+
 
 
 app.use(express.json());
@@ -72,10 +80,22 @@ const server = app.listen(PORT, () =>
 const io = require("socket.io")(server, {
   pingTimeout: 60000,
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: function (origin, callback) {
+      if (
+        !origin ||
+        origin.startsWith("http://localhost:3000") ||
+        origin.endsWith(".vercel.app")
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
+
 
 io.on("connection", (socket) => {
   console.log("Connected to socket.io");
