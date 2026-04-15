@@ -17,19 +17,31 @@ import {
 const ProfileModal = ({ user, children }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
+  // 🛑 HARD GUARD — prevents empty modal
+  if (!user) return null;
+
   return (
     <>
       {children ? (
-        <span onClick={onOpen}>{children}</span>
+        <span onClick={onOpen} style={{ cursor: "pointer" }}>
+          {children}
+        </span>
       ) : (
-        <IconButton icon={<ViewIcon />} onClick={onOpen} />
+        <IconButton
+          icon={<ViewIcon />}
+          onClick={onOpen}
+          aria-label="View Profile"
+        />
       )}
 
       <Modal isOpen={isOpen} onClose={onClose} isCentered size="lg">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader textAlign="center">{user.name}</ModalHeader>
+          <ModalHeader textAlign="center">
+            {user.name || "User"}
+          </ModalHeader>
           <ModalCloseButton />
+
           <ModalBody
             display="flex"
             flexDir="column"
@@ -39,13 +51,20 @@ const ProfileModal = ({ user, children }) => {
             <Image
               borderRadius="full"
               boxSize="150px"
-              src={user.pic}
-              alt={user.name}
+              src={user.pic || "https://via.placeholder.com/150"}
+              alt={user.name || "profile"}
             />
-            <Text>Email: {user.email}</Text>
+
+            <Text fontSize="md">
+              <b>Email:</b>{" "}
+              {user.email ? user.email : "Email not available"}
+            </Text>
           </ModalBody>
+
           <ModalFooter>
-            <Button onClick={onClose}>Close</Button>
+            <Button onClick={onClose} colorScheme="blue">
+              Close
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

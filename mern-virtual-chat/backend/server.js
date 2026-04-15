@@ -17,20 +17,27 @@ connectDB();
 
 const app = express();
 
-/* -------------------- MIDDLEWARE -------------------- */
+/* -------------------- CORS CONFIG -------------------- */
+const configuredOrigins = (process.env.CLIENT_URL || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://virtual-chat-room-1.onrender.com",
+  ...configuredOrigins,
+];
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  return /^https:\/\/.*\.vercel\.app$/.test(origin);
+};
+
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (
-        !origin ||
-        origin.startsWith("http://localhost:3000") ||
-        origin.endsWith(".vercel.app")
-      ) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: process.env.CLIENT_URL,
     credentials: true,
   })
 );
@@ -58,7 +65,9 @@ if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname1, "frontend/build")));
 
   app.get("*", (req, res) =>
-    res.sendFile(path.resolve(__dirname1, "frontend", "build", "index.html"))
+    res.sendFile(
+      path.resolve(__dirname1, "frontend", "build", "index.html")
+    )
   );
 } else {
   app.get("/", (req, res) => {
@@ -70,27 +79,18 @@ if (process.env.NODE_ENV === "production") {
 app.use(notFound);
 app.use(errorHandler);
 
-/* -------------------- SERVER + SOCKET.IO -------------------- */
+/* -------------------- SERVER -------------------- */
 const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () =>
   console.log(`Server running on PORT ${PORT}`)
 );
 
+/* -------------------- SOCKET.IO -------------------- */
 const io = require("socket.io")(server, {
   pingTimeout: 60000,
   cors: {
-    origin: function (origin, callback) {
-      if (
-        !origin ||
-        origin.startsWith("http://localhost:3000") ||
-        origin.endsWith(".vercel.app")
-      ) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: process.env.CLIENT_URL,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -112,13 +112,13 @@ io.on("connection", (socket) => {
   socket.on("typing", (room) => socket.in(room).emit("typing"));
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
-  socket.on("new message", (newMessageRecieved) => {
-    const chat = newMessageRecieved.chat;
+  socket.on("new message", (newMessageReceived) => {
+    const chat = newMessageReceived.chat;
     if (!chat.users) return;
 
     chat.users.forEach((user) => {
-      if (user._id === newMessageRecieved.sender._id) return;
-      socket.in(user._id).emit("message recieved", newMessageRecieved);
+      if (user._id === newMessageReceived.sender._id) return;
+      socket.in(user._id).emit("message received", newMessageReceived);
     });
   });
 });

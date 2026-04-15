@@ -1,40 +1,52 @@
 import { AddIcon } from "@chakra-ui/icons";
 import { Box, Stack, Text } from "@chakra-ui/layout";
 import { Button, useToast } from "@chakra-ui/react";
-import api from "../api/axios";
 import { useCallback, useEffect, useState } from "react";
 
-import { getSender } from "../config/ChatLogics.js";
-import ChatLoading from "./ChatLoading.jsx";
-import GroupChatModal from "./miscellaneous/GroupChatModal.jsx";
-import { ChatState } from "../Context/ChatProvider.jsx";
+import api from "../api/axios";
+import { getSender } from "../config/ChatLogics";
+import ChatLoading from "./ChatLoading";
+import GroupChatModal from "./miscellaneous/GroupChatModal";
+import { ChatState } from "../Context/ChatProvider";
 
 const MyChats = ({ fetchAgain }) => {
-  const [loggedUser, setLoggedUser] = useState(null);
   const { selectedChat, setSelectedChat, user, chats, setChats } = ChatState();
+  const [loggedUser, setLoggedUser] = useState(null);
   const toast = useToast();
 
   const fetchChats = useCallback(async () => {
+    if (!user || !user.token) return;
+
     try {
-      const config = {
-        headers: { Authorization: `Bearer ${user.token}` },
-      };
-      const { data } = await api.get("/api/chat", config);
-      setChats(data);
+      const { data } = await api.get("/api/chat", {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
+
+      setChats(Array.isArray(data) ? data : []);
     } catch (error) {
       toast({
         title: "Failed to load chats",
         status: "error",
-        duration: 5000,
+        duration: 4000,
         isClosable: true,
       });
     }
   }, [user, setChats, toast]);
 
   useEffect(() => {
-    setLoggedUser(JSON.parse(localStorage.getItem("userInfo")));
+    const storedUser = localStorage.getItem("userInfo");
+    if (storedUser) {
+      setLoggedUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  useEffect(() => {
     fetchChats();
   }, [fetchAgain, fetchChats]);
+
+  if (!user) return null;
 
   return (
     <Box
@@ -64,29 +76,29 @@ const MyChats = ({ fetchAgain }) => {
       </Box>
 
       <Box bg="#F8F8F8" w="100%" h="100%" p={3} borderRadius="lg">
-        {chats ? (
+        {chats.length === 0 ? (
+          <ChatLoading />
+        ) : (
           <Stack overflowY="scroll">
             {chats.map((chat) => (
               <Box
                 key={chat._id}
                 onClick={() => setSelectedChat(chat)}
                 cursor="pointer"
-                bg={selectedChat === chat ? "#38B2AC" : "#E8E8E8"}
-                color={selectedChat === chat ? "white" : "black"}
+                bg={selectedChat?._id === chat._id ? "#38B2AC" : "#E8E8E8"}
+                color={selectedChat?._id === chat._id ? "white" : "black"}
                 px={3}
                 py={2}
                 borderRadius="lg"
               >
                 <Text>
-                  {!chat.isGroupChat
+                  {!chat.isGroupChat && loggedUser
                     ? getSender(loggedUser, chat.users)
                     : chat.chatName}
                 </Text>
               </Box>
             ))}
           </Stack>
-        ) : (
-          <ChatLoading />
         )}
       </Box>
     </Box>
